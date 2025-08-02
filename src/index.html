@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Manager</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <style>
+        /* Add this at the start of your CSS */
+        :root {
+            /* Light Theme Variables */
+            --window-bg: #FFFFFF;
+            --sidebar-bg: #F5F5F7;
+            --toolbar-bg: #E7E7E7;
+            --border-color: #DBDBDB;
+            --text-primary: #000000;
+            --text-secondary: #666666;
+            --accent-color: #007AFF;
+            --selected-bg: #0063CC;
+            --hover-bg: rgba(0, 0, 0, 0.05);
+            --file-item-bg: #FFFFFF;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Theme Variables */
+            --window-bg: #1E1E1E;
+            --sidebar-bg: #252525;
+            --toolbar-bg: #323232;
+            --border-color: #424242;
+            --text-primary: #FFFFFF;
+            --text-secondary: #999999;
+            --accent-color: #0A84FF;
+            --selected-bg: #0063CC;
+            --hover-bg: rgba(255, 255, 255, 0.1);
+            --file-item-bg: #1E1E1E;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--window-bg);
+            color: var(--text-primary);
+        }
+
+        body * {
+            transition: background-color 0.2s ease,
+            color 0.2s ease,
+            border-color 0.2s ease;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 220px;
+            border-right: 1px solid var(--border-color);
+            padding: 10px;
+            overflow-y: auto;
+            background-color: var(--sidebar-bg);
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-section h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin: 0 0 8px 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .sidebar-section h3:hover {
+            background-color: var(--hover-bg);
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        .sidebar-section-toggle {
+            font-size: 14px;
+            transition: transform 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-section.collapsed .sidebar-section-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .sidebar-section-content {
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.2s ease;
+        }
+
+        .sidebar-section.collapsed .sidebar-section-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .sidebar-item:hover {
+            background-color: var(--hover-bg);
+            transform: translateX(4px);
+        }
+
+        .sidebar-item.active {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .sidebar-item .material-icons-outlined {
+            margin-right: 8px;
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-item.active .material-icons-outlined {
+            color: white;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .toolbar {
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--toolbar-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .current-path {
+            padding: 6px 12px;
+            border-radius: 6px;
+            flex-grow: 1;
+            font-size: 13px;
+            background-color: var(--file-item-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }
+
+        .controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--file-item-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: var(--hover-bg);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            background-color: var(--file-item-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin: 0;
+        }
+
+        .file-item {
+            padding: 12px 16px;
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item:hover {
+            background-color: var(--hover-bg);
+            transform: translateX(2px);
+        }
+
+        .file-item.selected {
+            background-color: var(--selected-bg);
+            color: white;
+        }
+
+        /* Grid view specific hover */
+        .file-list.grid-view .file-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .file-icon {
+            margin-right: 12px;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .folder {
+            color: #2466d8;
+        }
+
+        .hidden-file {
+            opacity: 0.6;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 4px;
+            margin-right: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .view-button {
+            background-color: var(--file-item-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .view-button.active {
+            background-color: var(--accent-color);
+            color: #FFFFFF;
+            border-color: var(--accent-color);
+        }
+
+        .theme-toggle {
+            margin-left: 8px;
+        }
+
+        /* Grid View Styles */
+        .file-list.grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 16px;
+            min-width: 0;
+        }
+
+        .file-list.grid-view .file-item {
+            flex-direction: column;
+            text-align: center;
+            height: 130px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .file-list.grid-view .file-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 8px;
+            margin-right: 0;
+        }
+
+        .file-list.grid-view .file-name {
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            line-height: 1.3;
+        }
+
+        /* List View Styles */
+        .file-list.list-view {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-list.list-view .file-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto auto;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 16px;
+        }
+
+        .file-info {
+            display: flex;
+            gap: 20px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }
+
+        .file-size {
+            text-align: right;
+            min-width: 70px;
+        }
+
+        .file-date {
+            text-align: right;
+            min-width: 120px;
+        }
+
+        .file-permissions {
+            text-align: right;
+            min-width: 80px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }
+
+        /* Hide info in grid view */
+        .file-list.grid-view .file-info {
+            display: none;
+        }
+
+        .file-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Custom tooltip styling */
+        .file-tooltip {
+            position: absolute;
+            background: var(--toolbar-bg);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .file-item:hover .file-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .material-icons-outlined {
+            color: var(--text-primary);
+            transition: color 0.2s ease;
+        }
+
+        /* Thumbnail styles */
+        .thumbnail-container {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 6px;
+            background: var(--sidebar-bg);
+        }
+
+        .thumbnail-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Preview modal styles */
+        .preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .preview-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .preview-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-content img {
+            display: block;
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .preview-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--toolbar-bg);
+            border: none;
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.9;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .preview-close:hover {
+            opacity: 1;
+        }
+
+        /* Keyboard shortcuts display */
+        .shortcuts-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--toolbar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .shortcuts-info.visible {
+            opacity: 1;
+        }
+
+        /* Scrollbar styling for WebKit browsers */
+        .container::-webkit-scrollbar,
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .container::-webkit-scrollbar-track,
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--sidebar-bg);
+        }
+
+        .container::-webkit-scrollbar-thumb,
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .container::-webkit-scrollbar-thumb:hover,
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Status bar */
+        .status-bar {
+            padding: 8px 16px;
+            background-color: var(--toolbar-bg);
+            border-top: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-count {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }
+
+        .system-info {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="sidebar-section">
+            <h3>
+                Quick Access
+                <span class="sidebar-section-toggle material-icons-outlined">expand_more</span>
+            </h3>
+            <div class="sidebar-section-content">
+                <div class="sidebar-item" data-path="home">
+                    <span class="material-icons-outlined">home</span>
+                    Home
+                </div>
+                <div class="sidebar-item" data-path="desktop">
+                    <span class="material-icons-outlined">desktop_windows</span>
+                    Desktop
+                </div>
+                <div class="sidebar-item" data-path="documents">
+                    <span class="material-icons-outlined">description</span>
+                    Documents
+                </div>
+                <div class="sidebar-item" data-path="downloads">
+                    <span class="material-icons-outlined">download</span>
+                    Downloads
+                </div>
+                <div class="sidebar-item" data-path="pictures">
+                    <span class="material-icons-outlined">photo_library</span>
+                    Pictures
+                </div>
+                <div class="sidebar-item" data-path="videos">
+                    <span class="material-icons-outlined">movie</span>
+                    Videos
+                </div>
+                <div class="sidebar-item" data-path="music">
+                    <span class="material-icons-outlined">library_music</span>
+                    Music
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>
+                System
+                <span class="sidebar-section-toggle material-icons-outlined">expand_more</span>
+            </h3>
+            <div class="sidebar-section-content">
+                <div class="sidebar-item" data-path="root">
+                    <span class="material-icons-outlined">storage</span>
+                    Root (/)
+                </div>
+                <div class="sidebar-item" data-path="usr">
+                    <span class="material-icons-outlined">folder</span>
+                    /usr
+                </div>
+                <div class="sidebar-item" data-path="opt">
+                    <span class="material-icons-outlined">extension</span>
+                    /opt
+                </div>
+                <div class="sidebar-item" data-path="tmp">
+                    <span class="material-icons-outlined">delete_sweep</span>
+                    /tmp
+                </div>
+                <div class="sidebar-item" data-path="run">
+                    <span class="material-icons-outlined">settings</span>
+                    /run
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>
+                Devices
+                <span class="sidebar-section-toggle material-icons-outlined">expand_more</span>
+            </h3>
+            <div class="sidebar-section-content">
+                <div class="sidebar-item" data-path="mnt">
+                    <span class="material-icons-outlined">usb</span>
+                    Mounts (/mnt)
+                </div>
+                <div class="sidebar-item" data-path="media">
+                    <span class="material-icons-outlined">storage</span>
+                    Media (/media)
+                </div>
+                <div id="mounted-devices">
+                    <!-- Dynamically populated mounted devices will go here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="toolbar">
+            <button id="back-button" title="Go back (Alt+Left)">
+                <span class="material-icons-outlined">arrow_back</span>
+            </button>
+            <button id="up-button" title="Go up (Alt+Up)">
+                <span class="material-icons-outlined">arrow_upward</span>
+            </button>
+            <div id="current-path" class="current-path"></div>
+            <div class="controls">
+                <div class="view-controls">
+                    <button id="list-view-button" class="view-button active" title="List view (Ctrl+1)">
+                        <span class="material-icons-outlined">list</span>
+                    </button>
+                    <button id="grid-view-button" class="view-button" title="Grid view (Ctrl+2)">
+                        <span class="material-icons-outlined">grid_view</span>
+                    </button>
+                    <button id="show-hidden-button" class="view-button" title="Show hidden files (Ctrl+H)">
+                        <span class="material-icons-outlined">visibility_off</span>
+                    </button>
+                </div>
+                <button id="theme-toggle" class="view-button theme-toggle" title="Toggle theme (Ctrl+T)">
+                    <span class="material-icons-outlined">dark_mode</span>
+                </button>
+                <button id="refresh-button" title="Refresh (F5)">
+                    <span class="material-icons-outlined">refresh</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="container">
+            <ul id="file-list" class="file-list"></ul>
+        </div>
+
+        <div class="status-bar">
+            <div class="item-count" id="item-count"></div>
+            <div class="system-info" id="system-info"></div>
+        </div>
+    </div>
+</div>
+
+<div class="shortcuts-info" id="shortcuts-info">
+    <div><strong>Keyboard Shortcuts:</strong></div>
+    <div>Ctrl+H: Toggle hidden files</div>
+    <div>Ctrl+1/2: Switch views</div>
+    <div>Alt+Left: Back</div>
+    <div>Alt+Up: Parent directory</div>
+    <div>F5: Refresh</div>
+</div>
+
+<script>
+    let currentDirectory = '';
+    let showHidden = false;
+    let currentView = 'list';
+    let selectedItem = null;
+    let systemInfo = {};
+
+    // Enhanced FILE_TYPE_ICONS with more Linux-specific file types
+    const FILE_TYPE_ICONS = {
+        // Documents
+        'pdf': 'picture_as_pdf',
+        'doc': 'description',
+        'docx': 'description',
+        'odt': 'description',
+        'txt': 'article',
+        'rtf': 'article',
+        'md': 'article',
+        'markdown': 'article',
+
+        // Images
+        'jpg': 'image',
+        'jpeg': 'image',
+        'png': 'image',
+        'gif': 'gif_box',
+        'webp': 'image',
+        'svg': 'gesture',
+        'bmp': 'image',
+        'tiff': 'image',
+        'ico': 'image',
+
+        // Audio/Video
+        'mp3': 'audio_file',
+        'wav': 'audio_file',
+        'flac': 'audio_file',
+        'ogg': 'audio_file',
+        'mp4': 'video_file',
+        'mkv': 'video_file',
+        'avi': 'video_file',
+        'webm': 'video_file',
+        'mov': 'video_file',
+
+        // Code
+        'js': 'code',
+        'ts': 'code',
+        'py': 'code',
+        'html': 'html',
+        'css': 'css',
+        'json': 'data_object',
+        'xml': 'code',
+        'sql': 'database',
+        'sh': 'terminal',
+        'bash': 'terminal',
+        'zsh': 'terminal',
+        'fish': 'terminal',
+        'rs': 'code',
+        'go': 'code',
+        'cpp': 'code',
+        'c': 'code',
+        'h': 'code',
+
+        // Archives
+        'zip': 'folder_zip',
+        'rar': 'folder_zip',
+        '7z': 'folder_zip',
+        'tar': 'folder_zip',
+        'gz': 'folder_zip',
+        'xz': 'folder_zip',
+        'bz2': 'folder_zip',
+
+        // Linux specific
+        'deb': 'inventory_2',
+        'rpm': 'inventory_2',
+        'AppImage': 'desktop_windows',
+        'flatpak': 'desktop_windows',
+        'snap': 'desktop_windows',
+
+        // Config files
+        'conf': 'settings',
+        'cfg': 'settings',
+        'ini': 'settings',
+        'toml': 'settings',
+        'yaml': 'settings',
+        'yml': 'settings',
+
+        // Temp files
+        'tmp': 'description',
+        'temp': 'description',
+        'bak': 'restore',
+        'log': 'article',
+        'cache': 'cached',
+
+        // Special directories
+        'Desktop': 'desktop_windows',
+        'Documents': 'folder_copy',
+        'Downloads': 'download',
+        'Pictures': 'photo_library',
+        'Music': 'library_music',
+        'Videos': 'movie',
+        'Public': 'folder_shared',
+        'Templates': 'content_copy',
+        '.config': 'settings',
+        '.cache': 'cached',
+        '.local': 'folder_special',
+        'node_modules': 'inventory_2',
+        '.git': 'source',
+        'build': 'construction',
+        'dist': 'inventory_2',
+        'bin': 'terminal',
+        'sbin': 'admin_panel_settings',
+        'lib': 'folder_shared',
+        'usr': 'folder_shared',
+        'var': 'folder_special',
+        'etc': 'settings',
+        'home': 'home',
+        'root': 'admin_panel_settings',
+        'tmp': 'delete_sweep',
+        'opt': 'extension',
+        'mnt': 'usb',
+        'media': 'storage'
+    };
+
+    // Helper function to get the icon for a file
+    function getFileIcon(file) {
+        if (file.isDirectory) {
+            return FILE_TYPE_ICONS[file.name] || 'folder';
+        }
+
+        const extension = file.name.split('.').pop().toLowerCase();
+        const fullName = file.name.toLowerCase();
+
+        // Check for executables
+        if (file.mode && (file.mode & 0o111)) {
+            if (!extension || ['sh', 'bash', 'zsh', 'fish'].includes(extension)) {
+                return 'terminal';
+            }
+            return 'play_arrow'; // Executable file
+        }
+
+        return FILE_TYPE_ICONS[extension] || 'draft';
+    }
+
+    // Helper function to format file sizes
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const k = 1024;
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${(bytes / Math.pow(k, i)).toFixed(1)} ${units[i]}`;
+    }
+
+    // Helper function to format dates
+    function formatDate(date) {
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (date.toDateString() === now.toDateString()) {
+            return 'Today ' + date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        } else if (date.toDateString() === yesterday.toDateString()) {
+            return 'Yesterday ' + date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        } else {
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric'
+            });
+        }
+    }
+
+    // Helper function to format Linux file permissions
+    function formatPermissions(mode) {
+        if (!mode) return '---';
+
+        const perms = ['---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx'];
+        const owner = perms[(mode >> 6) & 7];
+        const group = perms[(mode >> 3) & 7];
+        const others = perms[mode & 7];
+
+        return owner + group + others;
+    }
+
+    function isWebSupportedImage(filename) {
+        const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+        const ext = '.' + filename.split('.').pop().toLowerCase();
+        return supportedExtensions.includes(ext);
+    }
+
+    // Create file element with Linux-specific enhancements
+    async function createFileElement(file, viewType) {
+        const li = document.createElement('li');
+        li.className = `file-item ${file.isDirectory ? 'folder' : ''} ${file.name.startsWith('.') ? 'hidden-file' : ''}`;
+
+        const icon = document.createElement('div');
+        icon.className = 'file-icon';
+
+        if (file.isImage && viewType === 'grid') {
+            const thumbnailContainer = document.createElement('div');
+            thumbnailContainer.className = 'thumbnail-container';
+            const thumbnailUrl = await window.fileManager.getThumbnailUrl(file.path);
+
+            if (thumbnailUrl) {
+                const img = document.createElement('img');
+                img.src = thumbnailUrl;
+                img.alt = file.name;
+                thumbnailContainer.appendChild(img);
+                icon.appendChild(thumbnailContainer);
+            } else {
+                icon.innerHTML = '<span class="material-icons-outlined">image</span>';
+            }
+        } else {
+            const iconName = getFileIcon(file);
+            icon.innerHTML = `<span class="material-icons-outlined">${iconName}</span>`;
+        }
+
+        const name = document.createElement('span');
+        name.className = 'file-name';
+        name.textContent = file.name;
+
+        // Add file info section
+        const info = document.createElement('div');
+        info.className = 'file-info';
+
+        const size = document.createElement('span');
+        size.className = 'file-size';
+        size.textContent = file.isDirectory ? '--' : formatFileSize(file.size);
+
+        const date = document.createElement('span');
+        date.className = 'file-date';
+        date.textContent = formatDate(new Date(file.mtime));
+
+        const permissions = document.createElement('span');
+        permissions.className = 'file-permissions';
+        permissions.textContent = formatPermissions(file.mode);
+
+        info.appendChild(size);
+        info.appendChild(date);
+        info.appendChild(permissions);
+
+        // Add tooltip with full path and details
+        const tooltip = document.createElement('div');
+        tooltip.className = 'file-tooltip';
+        tooltip.innerHTML = `
+            <div><strong>${file.name}</strong></div>
+            <div>Path: ${file.path}</div>
+            ${!file.isDirectory ? `<div>Size: ${formatFileSize(file.size)}</div>` : ''}
+            <div>Modified: ${formatDate(new Date(file.mtime))}</div>
+            <div>Permissions: ${formatPermissions(file.mode)}</div>
+        `;
+
+        li.appendChild(icon);
+        li.appendChild(name);
+        li.appendChild(info);
+        li.appendChild(tooltip);
+
+        // Position tooltip on hover
+        li.addEventListener('mousemove', (e) => {
+            const bounds = li.getBoundingClientRect();
+            tooltip.style.left = `${e.clientX - bounds.left + 10}px`;
+            tooltip.style.top = `${e.clientY - bounds.top - 60}px`;
+        });
+
+        // Handle selection
+        li.addEventListener('click', (e) => {
+            document.querySelectorAll('.file-item.selected').forEach(item => {
+                if (item !== li) item.classList.remove('selected');
+            });
+            li.classList.add('selected');
+            selectedItem = li;
+        });
+
+        // Handle double-click
+        li.addEventListener('dblclick', async () => {
+            if (file.isDirectory) {
+                const newPath = `${currentDirectory}/${file.name}`;
+                loadDirectory(newPath);
+            } else if (isWebSupportedImage(file.name)) {
+                showImagePreview(file);
+            } else {
+                try {
+                    await window.fileManager.openFile(`${currentDirectory}/${file.name}`);
+                } catch (error) {
+                    console.error('Error opening file:', error);
+                }
+            }
+        });
+
+        return li;
+    }
+
+    // Show image preview
+    async function showImagePreview(file) {
+        const modal = document.getElementById('imagePreviewModal');
+        const previewImage = document.getElementById('previewImage');
+
+        try {
+            const imageUrl = await window.fileManager.getThumbnailUrl(file.path);
+            if (imageUrl) {
+                previewImage.src = imageUrl;
+                modal.classList.add('active');
+
+                const closeModal = () => {
+                    modal.classList.remove('active');
+                    previewImage.src = '';
+                };
+
+                modal.querySelector('.preview-close').onclick = closeModal;
+                modal.onclick = (e) => {
+                    if (e.target === modal) closeModal();
+                };
+
+                document.addEventListener('keydown', function escapeHandler(e) {
+                    if (e.key === 'Escape') {
+                        closeModal();
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error showing image preview:', error);
+        }
+    }
+
+    // Load directory with enhanced features
+    async function loadDirectory(path) {
+        const fileList = document.getElementById('file-list');
+        const currentPath = document.getElementById('current-path');
+        const itemCount = document.getElementById('item-count');
+
+        currentDirectory = path;
+        currentPath.textContent = path;
+        fileList.innerHTML = '';
+        fileList.className = `file-list ${currentView}-view`;
+
+        try {
+            const files = await window.fileManager.readDirectory(path);
+
+            const sortedFiles = files.sort((a, b) => {
+                if (a.isDirectory && !b.isDirectory) return -1;
+                if (!a.isDirectory && b.isDirectory) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            let visibleCount = 0;
+            for (const file of sortedFiles) {
+                if (!showHidden && file.name.startsWith('.')) continue;
+                const fileElement = await createFileElement(file, currentView);
+                fileList.appendChild(fileElement);
+                visibleCount++;
+            }
+
+            // Update item count
+            const totalCount = sortedFiles.length;
+            const hiddenCount = totalCount - visibleCount;
+            itemCount.textContent = `${visibleCount} items${hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ''}`;
+
+            // Update sidebar active state
+            updateSidebarActiveState(path);
+
+        } catch (error) {
+            console.error('Error reading directory:', error);
+            const errorLi = document.createElement('li');
+            errorLi.textContent = `Error: ${error.message}`;
+            errorLi.style.color = 'red';
+            errorLi.style.padding = '20px';
+            fileList.appendChild(errorLi);
+            itemCount.textContent = 'Error loading directory';
+        }
+    }
+
+    // Update sidebar active state
+    function updateSidebarActiveState(currentPath) {
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // Find matching sidebar item
+        document.querySelectorAll('.sidebar-item[data-path]').forEach(item => {
+            const itemPath = item.dataset.path;
+            if (itemPath && currentPath.includes(itemPath)) {
+                item.classList.add('active');
+            }
+        });
+    }
+
+    // Load mounted devices
+    async function loadMountedDevices() {
+        try {
+            const devices = await window.fileManager.getMountedDevices();
+            const container = document.getElementById('mounted-devices');
+            container.innerHTML = '';
+
+            devices.forEach(device => {
+                const deviceItem = document.createElement('div');
+                deviceItem.className = 'sidebar-item';
+                deviceItem.dataset.path = device.path;
+                deviceItem.innerHTML = `
+                    <span class="material-icons-outlined">${device.type === 'media' ? 'storage' : 'usb'}</span>
+                    ${device.name}
+                `;
+                deviceItem.addEventListener('click', () => {
+                    loadDirectory(device.path);
+                });
+                container.appendChild(deviceItem);
+            });
+        } catch (error) {
+            console.error('Error loading mounted devices:', error);
+        }
+    }
+
+    // Initialize system info
+    async function initSystemInfo() {
+        try {
+            systemInfo = window.fileManager.getDesktopInfo();
+            const systemInfoElement = document.getElementById('system-info');
+            systemInfoElement.textContent = `${systemInfo.compositor || systemInfo.desktop} ${systemInfo.session}`;
+        } catch (error) {
+            console.error('Error getting system info:', error);
+        }
+    }
+
+    // Set up collapsible sidebar sections
+    function setupCollapsibleSections() {
+        document.querySelectorAll('.sidebar-section h3').forEach(header => {
+            header.addEventListener('click', () => {
+                const section = header.parentElement;
+                section.classList.toggle('collapsed');
+
+                // Save collapsed state to localStorage
+                const sectionName = header.textContent.trim();
+                const collapsedSections = JSON.parse(localStorage.getItem('collapsedSections') || '[]');
+
+                if (section.classList.contains('collapsed')) {
+                    if (!collapsedSections.includes(sectionName)) {
+                        collapsedSections.push(sectionName);
+                    }
+                } else {
+                    const index = collapsedSections.indexOf(sectionName);
+                    if (index > -1) {
+                        collapsedSections.splice(index, 1);
+                    }
+                }
+
+                localStorage.setItem('collapsedSections', JSON.stringify(collapsedSections));
+            });
+        });
+
+        // Restore collapsed state
+        try {
+            const collapsedSections = JSON.parse(localStorage.getItem('collapsedSections') || '[]');
+            document.querySelectorAll('.sidebar-section h3').forEach(header => {
+                const sectionName = header.textContent.trim();
+                if (collapsedSections.includes(sectionName)) {
+                    header.parentElement.classList.add('collapsed');
+                }
+            });
+        } catch (e) {
+            // Ignore localStorage errors
+        }
+    }
+
+    // Enhanced keyboard shortcuts
+    function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+H: Toggle hidden files
+            if (e.ctrlKey && e.key === 'h') {
+                e.preventDefault();
+                document.getElementById('show-hidden-button').click();
+            }
+
+            // Ctrl+1: List view
+            if (e.ctrlKey && e.key === '1') {
+                e.preventDefault();
+                document.getElementById('list-view-button').click();
+            }
+
+            // Ctrl+2: Grid view
+            if (e.ctrlKey && e.key === '2') {
+                e.preventDefault();
+                document.getElementById('grid-view-button').click();
+            }
+
+            // Ctrl+T: Toggle theme
+            if (e.ctrlKey && e.key === 't') {
+                e.preventDefault();
+                document.getElementById('theme-toggle').click();
+            }
+
+            // F5: Refresh
+            if (e.key === 'F5') {
+                e.preventDefault();
+                document.getElementById('refresh-button').click();
+            }
+
+            // Alt+Left: Back
+            if (e.altKey && e.key === 'ArrowLeft') {
+                e.preventDefault();
+                document.getElementById('back-button').click();
+            }
+
+            // Alt+Up: Up directory
+            if (e.altKey && e.key === 'ArrowUp') {
+                e.preventDefault();
+                document.getElementById('up-button').click();
+            }
+
+            // Show shortcuts on Ctrl+/
+            if (e.ctrlKey && e.key === '/') {
+                e.preventDefault();
+                const shortcuts = document.getElementById('shortcuts-info');
+                shortcuts.classList.toggle('visible');
+                setTimeout(() => shortcuts.classList.remove('visible'), 3000);
+            }
+        });
+    }
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', async () => {
+        const homePath = window.fileManager.getHomeDir();
+
+        // Initialize system info
+        await initSystemInfo();
+
+        // Load mounted devices
+        await loadMountedDevices();
+
+        // Set up theme
+        const themeToggle = document.getElementById('theme-toggle');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (prefersDark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.querySelector('.material-icons-outlined').textContent = 'light_mode';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const icon = themeToggle.querySelector('.material-icons-outlined');
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            icon.textContent = newTheme === 'dark' ? 'light_mode' : 'dark_mode';
+        });
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            const newTheme = e.matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            themeToggle.querySelector('.material-icons-outlined').textContent =
+                newTheme === 'dark' ? 'light_mode' : 'dark_mode';
+        });
+
+        // Set up view controls
+        const listViewButton = document.getElementById('list-view-button');
+        const gridViewButton = document.getElementById('grid-view-button');
+        const showHiddenButton = document.getElementById('show-hidden-button');
+        const backButton = document.getElementById('back-button');
+        const upButton = document.getElementById('up-button');
+        const refreshButton = document.getElementById('refresh-button');
+
+        listViewButton.addEventListener('click', () => {
+            currentView = 'list';
+            listViewButton.classList.add('active');
+            gridViewButton.classList.remove('active');
+            loadDirectory(currentDirectory);
+        });
+
+        gridViewButton.addEventListener('click', () => {
+            currentView = 'grid';
+            gridViewButton.classList.add('active');
+            listViewButton.classList.remove('active');
+            loadDirectory(currentDirectory);
+        });
+
+        showHiddenButton.addEventListener('click', () => {
+            showHidden = !showHidden;
+            showHiddenButton.classList.toggle('active');
+            const icon = showHiddenButton.querySelector('.material-icons-outlined');
+            icon.textContent = showHidden ? 'visibility' : 'visibility_off';
+            loadDirectory(currentDirectory);
+        });
+
+        backButton.addEventListener('click', () => {
+            if (currentDirectory === homePath) return;
+            const parentDir = currentDirectory.split('/').slice(0, -1).join('/') || '/';
+            loadDirectory(parentDir);
+        });
+
+        upButton.addEventListener('click', () => {
+            const parentDir = currentDirectory.split('/').slice(0, -1).join('/') || '/';
+            loadDirectory(parentDir);
+        });
+
+        refreshButton.addEventListener('click', () => {
+            loadDirectory(currentDirectory);
+            loadMountedDevices(); // Also refresh mounted devices
+        });
+
+        // Set up sidebar navigation
+        document.querySelectorAll('.sidebar-item[data-path]').forEach(item => {
+            item.addEventListener('click', async () => {
+                const location = item.dataset.path;
+                const path = await window.fileManager.getCommonPath(location);
+                if (path) {
+                    loadDirectory(path);
+                }
+            });
+        });
+
+        // Set up keyboard shortcuts
+        setupKeyboardShortcuts();
+
+        // Set up collapsible sidebar sections
+        setupCollapsibleSections();
+
+        // Load initial directory
+        await loadDirectory(homePath);
+    });
+</script>
+
+<div class="preview-modal" id="imagePreviewModal">
+    <div class="preview-content">
+        <img id="previewImage" src="" alt="Preview">
+        <button class="preview-close">
+            <span class="material-icons-outlined">close</span>
+        </button>
+    </div>
+</div>
+
+</body>
+</html>
